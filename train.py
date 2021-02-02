@@ -3,8 +3,8 @@ import os
 
 import warnings
 
-from model import CANNet
-
+#from .model import CANNet
+from models.transformer_cc import TR_CC
 from utils import save_checkpoint
 
 import torch
@@ -18,8 +18,10 @@ import json
 import cv2
 import dataset
 import time
-
-parser = argparse.ArgumentParser(description='PyTorch CANNet')
+import torch_xla
+import torch_xla.core.xla_model as xm
+dev=xm.xla_device()
+parser = argparse.ArgumentParser(description='Tranformer_CC')
 
 parser.add_argument('train_json', metavar='TRAIN',
                     help='path to train json')
@@ -46,13 +48,13 @@ def main():
     with open(args.val_json, 'r') as outfile:
         val_list = json.load(outfile)
 
-    torch.cuda.manual_seed(args.seed)
+  #  torch.cuda.manual_seed(args.seed)
+    torch.manual_seed(args.seed)
+    model = TR_CC()
 
-    model = CANNet()
+    model = model.to(dev)
 
-    model = model.cuda()
-
-    criterion = nn.MSELoss(size_average=False).cuda()
+    criterion = nn.MSELoss(size_average=False).to(dev)
 
     optimizer = torch.optim.Adam(model.parameters(), args.lr,
                                     weight_decay=args.decay)
@@ -95,11 +97,11 @@ def train(train_list, model, criterion, optimizer, epoch):
     for i,(img, target)in enumerate(train_loader):
         data_time.update(time.time() - end)
 
-        img = img.cuda()
+        img = img.to(dev)
         img = Variable(img)
         output = model(img)[:,0,:,:]
 
-        target = target.type(torch.FloatTensor).cuda()
+        target = target.type(torch.FloatTensor).to(dev)
         target = Variable(target)
 
         loss = criterion(output, target)
@@ -140,10 +142,10 @@ def validate(val_list, model, criterion):
         h,w = img.shape[2:4]
         h_d = h/2
         w_d = w/2
-        img_1 = Variable(img[:,:,:h_d,:w_d].cuda())
-        img_2 = Variable(img[:,:,:h_d,w_d:].cuda())
-        img_3 = Variable(img[:,:,h_d:,:w_d].cuda())
-        img_4 = Variable(img[:,:,h_d:,w_d:].cuda())
+        img_1 = Variable(img[:,:,:h_d,:w_d].to(dev))
+        img_2 = Variable(img[:,:,:h_d,w_d:].to(dev))
+        img_3 = Variable(img[:,:,h_d:,:w_d].to(dev))
+        img_4 = Variable(img[:,:,h_d:,w_d:].to(dev))
         density_1 = model(img_1).data.cpu().numpy()
         density_2 = model(img_2).data.cpu().numpy()
         density_3 = model(img_3).data.cpu().numpy()
