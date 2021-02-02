@@ -39,16 +39,16 @@ model.eval()
 pred= []
 gt = []
 
-for i in xrange(len(img_paths)):
+for i in range(len(img_paths)):
     img = transform(Image.open(img_paths[i]).convert('RGB')).cuda()
     img = img.unsqueeze(0)
     h,w = img.shape[2:4]
-    h_d = h/2
-    w_d = w/2
-    img_1 = Variable(img[:,:,:h_d,:w_d].cuda())
-    img_2 = Variable(img[:,:,:h_d,w_d:].cuda())
-    img_3 = Variable(img[:,:,h_d:,:w_d].cuda())
-    img_4 = Variable(img[:,:,h_d:,w_d:].cuda())
+    h_d = h//2
+    w_d = w//2
+    img_1 = Variable(img[:,:,:h_d,:w_d].to(dev))
+    img_2 = Variable(img[:,:,:h_d,w_d:].to(dev))
+    img_3 = Variable(img[:,:,h_d:,:w_d].to(dev))
+    img_4 = Variable(img[:,:,h_d:,w_d:].to(dev))
     density_1 = model(img_1).data.cpu().numpy()
     density_2 = model(img_2).data.cpu().numpy()
     density_3 = model(img_3).data.cpu().numpy()
@@ -64,5 +64,5 @@ for i in xrange(len(img_paths)):
 mae = mean_absolute_error(pred,gt)
 rmse = np.sqrt(mean_squared_error(pred,gt))
 
-print 'MAE: ',mae
-print 'RMSE: ',rmse
+print ('MAE: ',mae)
+print ('RMSE: ',rmse)
