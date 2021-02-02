@@ -69,7 +69,7 @@ class TR_CC(nn.Module):
         ], dim=-1).permute(2, 0, 1).unsqueeze(0).repeat(bs, 1, 1, 1)
         # propagate through the transformer
         h = self.transformer(0.1 * src,pos)
-        densitym=self.output_layer(h).squeeze(1)
+        densitym=self.output_layer(h)
         return densitym
 
     def _initialize_weights(self):
