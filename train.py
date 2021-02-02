@@ -140,8 +140,8 @@ def validate(val_list, model, criterion):
 
     for i,(img, target) in enumerate(val_loader):
         h,w = img.shape[2:4]
-        h_d = h/2
-        w_d = w/2
+        h_d = h//2
+        w_d = w//2
         img_1 = Variable(img[:,:,:h_d,:w_d].to(dev))
         img_2 = Variable(img[:,:,:h_d,w_d:].to(dev))
         img_3 = Variable(img[:,:,h_d:,:w_d].to(dev))
