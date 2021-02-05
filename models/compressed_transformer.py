@@ -13,7 +13,36 @@ import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
 
+class ConvCompress(nn.Module):
+    def __init__(self, dim, ratio = 4, groups = 1):
+        super().__init__()
+        self.conv = nn.Conv1d(dim, dim, ratio, stride = ratio, groups = groups)
 
+    def forward(self, mem):
+        mem = mem.transpose(1, 2)
+        compressed_mem = self.conv(mem)
+        return compressed_mem.transpose(1, 2)
+#how to introduce the feature of d_model in nn.multiheadattention into customized attention
+Class CustomizedAttn(nn.Module):
+    def __init__(self, d_model, nhead, dropout=0.1)):
+        super().__init__()
+        self.nhead=nhead
+        self.dropout = nn.Dropout(dropout)
+        self.d_model=d_model
+    def forward(self, q, k, v):     
+        assert self.d_model == q.shape[2], "embed_dim must be equal to "
+        q, k, v = map(lambda t: t.reshape(*t.shape[:2], self.nhead, -1).transpose(1, 2), (q, k, v))
+        # attention
+        dots = torch.einsum('bhid,bhjd->bhij', q, k) * d ** -0.5
+        attn = dots.softmax(dim=-1)
+        # dropout
+        attn = self.dropout(dots)
+        out = torch.einsum('bhij,bhjd->bhid', attn, v)
+        # split heads and combine
+        out = out.transpose(1, 2).reshape(b, t, d)
+        return out
+      
+      
 class Transformer(nn.Module):
 
     def __init__(self, d_model=64, nhead=8, num_encoder_layers=2, dim_feedforward=2048, dropout=0.1,
