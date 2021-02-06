@@ -14,7 +14,7 @@ import math
 #dev=to.class TR_CC(nn.Module):
 dev='cuda'
 class TR_CC(nn.Module):
-    def __init__(self, hidden_dim=24, nheads=1,
+    def __init__(self, hidden_dim=24, nheads=4,
                  num_encoder_layers=6,load_weights=False):
         super().__init__()
 
