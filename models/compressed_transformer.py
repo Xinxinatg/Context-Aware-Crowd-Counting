@@ -53,7 +53,6 @@ class CustomizedAttn(nn.Module):
         k= self.to_k(k)
         q= self.to_q(q)
         v= self.to_v(value)
-        print()
         padding = cf - (t % cf)
         if padding != 0:
             k, v = map(lambda t: F.pad(t, (0, 0, padding, 0)), (k, v))
