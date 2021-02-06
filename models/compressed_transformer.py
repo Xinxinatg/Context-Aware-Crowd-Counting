@@ -24,7 +24,7 @@ class ConvCompress(nn.Module):
         return compressed_mem.transpose(1, 2)
 
 class CustomizedAttn(nn.Module):
-    def __init__(self, d_model=24, nhead=2,  compression_factor = 4, dropout=0.1):
+    def __init__(self, d_model=24, nhead=2,  compression_factor = 2, dropout=0.1):
         super().__init__()
         assert (d_model % nhead) == 0, 'dimension must be divisible by number of heads'
         self.heads = nhead
