@@ -18,9 +18,10 @@ import json
 import cv2
 import dataset
 import time
-import torch_xla
-import torch_xla.core.xla_model as xm
-dev=xm.xla_device()
+#import torch_xla
+#import torch_xla.core.xla_model as xm
+#dev=xm.xla_device()
+dev='cuda'
 parser = argparse.ArgumentParser(description='Tranformer_CC')
 
 parser.add_argument('train_json', metavar='TRAIN',
@@ -36,13 +37,13 @@ def main():
 
     args = parser.parse_args()
     args.lr = 1e-4
-    args.batch_size    = 26
+    args.batch_size    = 1
     args.decay         = 5*1e-4
     args.start_epoch   = 0
     args.epochs = 1000
     args.workers = 4
     args.seed = int(time.time())
-    args.print_freq = 4
+    args.print_freq = 50
     with open(args.train_json, 'r') as outfile:
         train_list = json.load(outfile)
     with open(args.val_json, 'r') as outfile:
