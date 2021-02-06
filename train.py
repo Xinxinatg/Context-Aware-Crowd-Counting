@@ -4,7 +4,7 @@ import os
 import warnings
 
 #from .model import CANNet
-from models.transformer_cc import TR_CC
+from models.transformer_cc_cuda import TR_CC
 from utils import save_checkpoint
 
 import torch
