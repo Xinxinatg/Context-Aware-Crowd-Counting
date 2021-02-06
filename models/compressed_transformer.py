@@ -34,7 +34,7 @@ Class CustomizedAttn(nn.Module):
 
         self.to_qkv = nn.Linear(d_model, d_model * 3, bias = False)
         self.to_out = nn.Linear(d_model, d_model)
-        self.layernorm = nn.LayerNorm(d_model, eps=1e-12)
+        self.layernorm = nn.BatchNorm1d(d_model, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.dropout = nn.Dropout(dropout)
 
         self.null_k = nn.Parameter(torch.zeros(1, 1, dim))
