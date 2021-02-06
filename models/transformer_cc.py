@@ -81,6 +81,16 @@ class TR_CC(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm1d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                fansum = m.weight.size(1) + m.weight.size(0)
+                scale = 1. / max(1., float(fansum) / 2.)
+                stdv = math.sqrt(3. * scale)
+                m.weight.data.uniform_(-stdv, stdv)
+                if m.bias is not None:
+                    m.bias.data.zero_()
 
 def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
     if dilation:
