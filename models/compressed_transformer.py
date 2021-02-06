@@ -46,7 +46,7 @@ class CustomizedAttn(nn.Module):
       
     def forward(self, k, q, value):     
         assert self.d_model == k.shape[2], "embed_dim must be equal to the number of 3rd dimension"
-        b, t, d, h, cf = *x.shape, self.heads, self.compression_factor
+        b, t, d, h, cf = *k.shape, self.heads, self.compression_factor
         k= self.to_k(k)
         q= self.to_q(q)
         v= self.to_v(value)
