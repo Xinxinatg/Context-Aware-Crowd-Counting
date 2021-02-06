@@ -31,7 +31,8 @@ class CustomizedAttn(nn.Module):
         self.compression_factor = compression_factor
         self.compress_fn = ConvCompress(d_model, compression_factor, groups = nhead)
 
-        self.to_qkv = nn.Linear(d_model, d_model * 3, bias = False)
+        self.to_qk = nn.Linear(d_model, 2*d_model, bias = False)
+        self.to_v=nn.Linear(d_model, d_model, bias = False)
         self.to_out = nn.Linear(d_model, d_model)
         self.layernorm = nn.BatchNorm1d(d_model, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.dropout = nn.Dropout(dropout)
@@ -41,10 +42,11 @@ class CustomizedAttn(nn.Module):
         self.null_k = nn.Parameter(torch.zeros(1, 1, d_model))
         self.null_v = nn.Parameter(torch.zeros(1, 1, d_model))
       
-    def forward(self, x):     
+    def forward(self, x, value):     
         assert self.d_model == x.shape[2], "embed_dim must be equal to the number of 3rd dimension"
         b, t, d, h, cf = *x.shape, self.heads, self.compression_factor
-        q, k, v = self.to_qkv(x).chunk(3, dim=-1)
+        q, k= self.to_qk(x).chunk(2, dim=-1)
+        v= self.to_v(value)
         padding = cf - (t % cf)
         if padding != 0:
             k, v = map(lambda t: F.pad(t, (0, 0, padding, 0)), (k, v))
@@ -152,7 +154,7 @@ class TransformerEncoderLayer(nn.Module):
 
       #  src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
            #                   key_padding_mask=src_key_padding_mask)[0]
-        src2 = self.self_attn(q, k, value=src)[0]
+        src2 = self.self_attn(q, value=src)
         src = src + self.dropout1(src2)
         src = self.norm1(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
@@ -166,8 +168,8 @@ class TransformerEncoderLayer(nn.Module):
                     pos: Optional[Tensor] = None):
         src2 = self.norm1(src)
         q = k = self.with_pos_embed(src2, pos)
-        src2 = self.self_attn(q, k, value=src2, attn_mask=src_mask,
-                              key_padding_mask=src_key_padding_mask)[0]
+        src2 = self.self_attn(k, value=src2, attn_mask=src_mask,
+                              key_padding_mask=src_key_padding_mask)
         src = src + self.dropout1(src2)
         src2 = self.norm2(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src2))))
