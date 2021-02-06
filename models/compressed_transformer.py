@@ -14,9 +14,9 @@ import torch.nn.functional as F
 from torch import nn, Tensor
 
 class ConvCompress(nn.Module):
-    def __init__(self, dim, ratio = 4, groups = 1):
+    def __init__(self, d_model, ratio = 4, groups = 1):
         super().__init__()
-        self.conv = nn.Conv1d(dim, dim, ratio, stride = ratio, groups = groups)
+        self.conv = nn.Conv1d(d_model, d_model, ratio, stride = ratio, groups = groups)
 
     def forward(self, mem):
         mem = mem.transpose(1, 2)
@@ -24,13 +24,35 @@ class ConvCompress(nn.Module):
         return compressed_mem.transpose(1, 2)
 #how to introduce the feature of d_model in nn.multiheadattention into customized attention
 Class CustomizedAttn(nn.Module):
-    def __init__(self, d_model, nhead, dropout=0.1)):
+    def __init__(self, d_model=24, nhead=2,  compression_factor = 4, dropout=0.1)):
         super().__init__()
-        self.nhead=nhead
+        assert (d_model % nhead) == 0, 'dimension must be divisible by number of heads'
+
+        self.heads = nhead
+        self.compression_factor = compression_factor
+        self.compress_fn = ConvCompress(d_model, compression_factor, groups = nhead)
+
+        self.to_qkv = nn.Linear(d_model, d_model * 3, bias = False)
+        self.to_out = nn.Linear(d_model, d_model)
+
         self.dropout = nn.Dropout(dropout)
-        self.d_model=d_model
-    def forward(self, q, k, v):     
-        assert self.d_model == q.shape[2], "embed_dim must be equal to "
+
+        self.null_k = nn.Parameter(torch.zeros(1, 1, dim))
+        self.null_v = nn.Parameter(torch.zeros(1, 1, dim))
+        self.null_k = nn.Parameter(torch.zeros(1, 1, dim))
+        self.null_v = nn.Parameter(torch.zeros(1, 1, dim))
+      
+    def forward(self, x):     
+        assert self.d_model == x.shape[2], "embed_dim must be equal to the number of 3rd dimension"
+        b, t, d, h, cf = *x.shape, self.heads, self.compression_factor
+        q, k, v = self.to_qkv(x).chunk(3, dim=-1)
+        padding = cf - (t % cf)
+        if padding != 0:
+            k, v = map(lambda t: F.pad(t, (0, 0, padding, 0)), (k, v))
+        k, v = map(self.compress_fn, (k, v))
+        # attach a null key and value, in the case that the first query has no keys to pay attention to
+        k = torch.cat((self.null_k, k), dim=1)
+        v = torch.cat((self.null_v, v), dim=1)
         q, k, v = map(lambda t: t.reshape(*t.shape[:2], self.nhead, -1).transpose(1, 2), (q, k, v))
         # attention
         dots = torch.einsum('bhid,bhjd->bhij', q, k) * d ** -0.5
@@ -40,7 +62,7 @@ Class CustomizedAttn(nn.Module):
         out = torch.einsum('bhij,bhjd->bhid', attn, v)
         # split heads and combine
         out = out.transpose(1, 2).reshape(b, t, d)
-        return out
+        return self.to_out(out)
       
       
 class Transformer(nn.Module):
@@ -103,7 +125,7 @@ class TransformerEncoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
                  activation="relu", normalize_before=False):
         super().__init__()
-        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
+        self.self_attn = CustomizedAttn(d_model, nhead, dropout=dropout)
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(dropout)
