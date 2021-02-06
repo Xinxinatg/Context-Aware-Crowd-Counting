@@ -8,20 +8,12 @@ from torch import nn
 from torchvision import models
 import torchvision.transforms as T
 from .compressed_transformer import Transformer
+import math
 #import torch_xla
 #import torch_xla.core.xla_model as xm
 #dev=to.class TR_CC(nn.Module):
 dev='cuda'
-    """
-    Demo DETR implementation.
-    Demo implementation of DETR in minimal number of lines, with the
-    following differences wrt DETR in the paper:
-    * learned positional encoding (instead of sine)
-    * positional encoding is passed at input (instead of attention)
-    * fc bbox predictor (instead of MLP)
-    The model achieves ~40 AP on COCO val5k and runs at ~28 FPS on Tesla V100.
-    Only batch size 1 supported.
-    """
+class TR_CC(nn.Module):
     def __init__(self, hidden_dim=24, nheads=1,
                  num_encoder_layers=6,load_weights=False):
         super().__init__()
