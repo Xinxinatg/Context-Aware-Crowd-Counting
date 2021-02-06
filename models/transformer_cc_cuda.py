@@ -39,6 +39,7 @@ class TR_CC(nn.Module):
         # note that in baseline DETR we use sine positional encodings
         self.row_embed = nn.Parameter(torch.rand(400, hidden_dim // 2,requires_grad=True, device=dev))
         self.col_embed = nn.Parameter(torch.rand(400, hidden_dim // 2,requires_grad=True, device=dev))
+        self.output_norm = nn.ReLU(inplace=True)
         if not load_weights:
             mod = models.vgg16(pretrained = True)
             self._initialize_weights()
@@ -62,7 +63,7 @@ class TR_CC(nn.Module):
         # propagate through the transformer
         h = self.transformer(0.1 * src,pos)
         densitym=self.output_layer(h)
-        return densitym
+        return self.output_norm(densitym)
 
     def _initialize_weights(self):
         for m in self.modules():
