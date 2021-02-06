@@ -28,6 +28,7 @@ class CustomizedAttn(nn.Module):
         super().__init__()
         assert (d_model % nhead) == 0, 'dimension must be divisible by number of heads'
         self.heads = nhead
+        self.d_model=d_model
         self.compression_factor = compression_factor
         self.compress_fn = ConvCompress(d_model, compression_factor, groups = nhead)
 
