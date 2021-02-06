@@ -31,7 +31,8 @@ class CustomizedAttn(nn.Module):
         self.compression_factor = compression_factor
         self.compress_fn = ConvCompress(d_model, compression_factor, groups = nhead)
 
-        self.to_qk = nn.Linear(d_model, 2*d_model, bias = False)
+        self.to_k = nn.Linear(d_model,d_model, bias = False)
+        self.to_q = nn.Linear(d_model,d_model, bias = False)
         self.to_v=nn.Linear(d_model, d_model, bias = False)
         self.to_out = nn.Linear(d_model, d_model)
         self.layernorm = nn.BatchNorm1d(d_model, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
@@ -42,10 +43,11 @@ class CustomizedAttn(nn.Module):
         self.null_k = nn.Parameter(torch.zeros(1, 1, d_model))
         self.null_v = nn.Parameter(torch.zeros(1, 1, d_model))
       
-    def forward(self, x, value):     
-        assert self.d_model == x.shape[2], "embed_dim must be equal to the number of 3rd dimension"
+    def forward(self, k, q, value):     
+        assert self.d_model == k.shape[2], "embed_dim must be equal to the number of 3rd dimension"
         b, t, d, h, cf = *x.shape, self.heads, self.compression_factor
-        q, k= self.to_qk(x).chunk(2, dim=-1)
+        k= self.to_k(k)
+        q= self.to_q(q)
         v= self.to_v(value)
         padding = cf - (t % cf)
         if padding != 0:
