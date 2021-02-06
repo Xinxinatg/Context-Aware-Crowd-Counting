@@ -22,12 +22,11 @@ class ConvCompress(nn.Module):
         mem = mem.transpose(1, 2)
         compressed_mem = self.conv(mem)
         return compressed_mem.transpose(1, 2)
-#how to introduce the feature of d_model in nn.multiheadattention into customized attention
-Class CustomizedAttn(nn.Module):
-    def __init__(self, d_model=24, nhead=2,  compression_factor = 4, dropout=0.1)):
+
+class CustomizedAttn(nn.Module):
+    def __init__(self, d_model=24, nhead=2,  compression_factor = 4, dropout=0.1):
         super().__init__()
         assert (d_model % nhead) == 0, 'dimension must be divisible by number of heads'
-
         self.heads = nhead
         self.compression_factor = compression_factor
         self.compress_fn = ConvCompress(d_model, compression_factor, groups = nhead)
@@ -37,10 +36,10 @@ Class CustomizedAttn(nn.Module):
         self.layernorm = nn.BatchNorm1d(d_model, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.dropout = nn.Dropout(dropout)
 
-        self.null_k = nn.Parameter(torch.zeros(1, 1, dim))
-        self.null_v = nn.Parameter(torch.zeros(1, 1, dim))
-        self.null_k = nn.Parameter(torch.zeros(1, 1, dim))
-        self.null_v = nn.Parameter(torch.zeros(1, 1, dim))
+        self.null_k = nn.Parameter(torch.zeros(1, 1, d_model))
+        self.null_v = nn.Parameter(torch.zeros(1, 1, d_model))
+        self.null_k = nn.Parameter(torch.zeros(1, 1, d_model))
+        self.null_v = nn.Parameter(torch.zeros(1, 1, d_model))
       
     def forward(self, x):     
         assert self.d_model == x.shape[2], "embed_dim must be equal to the number of 3rd dimension"
