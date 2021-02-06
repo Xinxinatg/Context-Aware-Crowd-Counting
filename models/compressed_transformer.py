@@ -36,7 +36,7 @@ class CustomizedAttn(nn.Module):
         self.to_q = nn.Linear(d_model,d_model, bias = False)
         self.to_v=nn.Linear(d_model, d_model, bias = False)
         self.to_out = nn.Linear(d_model, d_model)
-        self.layernorm = nn.BatchNorm1d(d_model, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    #    self.layernorm = nn.BatchNorm1d(d_model, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.dropout = nn.Dropout(dropout)
 
         self.null_k = nn.Parameter(torch.zeros(1, 1, d_model))
@@ -44,12 +44,16 @@ class CustomizedAttn(nn.Module):
         self.null_k = nn.Parameter(torch.zeros(1, 1, d_model))
         self.null_v = nn.Parameter(torch.zeros(1, 1, d_model))
       
-    def forward(self, k, q, value):     
+    def forward(self, k, q, value):   
+        k=k.transpose(0,1)
+        q=q.transpose(0,1)  
+        value=value.transpose(0,1)
         assert self.d_model == k.shape[2], "embed_dim must be equal to the number of 3rd dimension"
         b, t, d, h, cf = *k.shape, self.heads, self.compression_factor
         k= self.to_k(k)
         q= self.to_q(q)
         v= self.to_v(value)
+        print()
         padding = cf - (t % cf)
         if padding != 0:
             k, v = map(lambda t: F.pad(t, (0, 0, padding, 0)), (k, v))
@@ -57,18 +61,18 @@ class CustomizedAttn(nn.Module):
         # attach a null key and value, in the case that the first query has no keys to pay attention to
         k = torch.cat((self.null_k, k), dim=1)
         v = torch.cat((self.null_v, v), dim=1)
-        q, k, v = map(lambda t: t.reshape(*t.shape[:2], self.nhead, -1).transpose(1, 2), (q, k, v))
+        q, k, v = map(lambda t: t.reshape(*t.shape[:2], self.heads, -1).transpose(1, 2), (q, k, v))
         # attention
         dots = torch.einsum('bhid,bhjd->bhij', q, k) * d ** -0.5
         attn = dots.softmax(dim=-1)
         # dropout
-        attn=self.layernorm(attn)
+    #    attn=self.layernorm(attn)
         attn = self.dropout(dots)
         out = torch.einsum('bhij,bhjd->bhid', attn, v)
         # split heads and combine
         out = out.transpose(1, 2).reshape(b, t, d)
         out=self.to_out(out)
-        return self.layernorm(out)
+        return out.transpose(0,1)
       
       
 class Transformer(nn.Module):
@@ -157,7 +161,7 @@ class TransformerEncoderLayer(nn.Module):
 
       #  src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
            #                   key_padding_mask=src_key_padding_mask)[0]
-        src2 = self.self_attn(q, value=src)
+        src2 = self.self_attn(q,k, value=src)
         src = src + self.dropout1(src2)
         src = self.norm1(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
@@ -171,8 +175,7 @@ class TransformerEncoderLayer(nn.Module):
                     pos: Optional[Tensor] = None):
         src2 = self.norm1(src)
         q = k = self.with_pos_embed(src2, pos)
-        src2 = self.self_attn(k, value=src2, attn_mask=src_mask,
-                              key_padding_mask=src_key_padding_mask)
+        src2 = self.self_attn(k, q,value=src2)
         src = src + self.dropout1(src2)
         src2 = self.norm2(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src2))))
