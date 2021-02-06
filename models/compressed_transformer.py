@@ -34,7 +34,7 @@ Class CustomizedAttn(nn.Module):
 
         self.to_qkv = nn.Linear(d_model, d_model * 3, bias = False)
         self.to_out = nn.Linear(d_model, d_model)
-
+        self.layernorm = nn.LayerNorm(d_model, eps=1e-12)
         self.dropout = nn.Dropout(dropout)
 
         self.null_k = nn.Parameter(torch.zeros(1, 1, dim))
@@ -58,11 +58,13 @@ Class CustomizedAttn(nn.Module):
         dots = torch.einsum('bhid,bhjd->bhij', q, k) * d ** -0.5
         attn = dots.softmax(dim=-1)
         # dropout
+        attn=self.layernorm(attn)
         attn = self.dropout(dots)
         out = torch.einsum('bhij,bhjd->bhid', attn, v)
         # split heads and combine
         out = out.transpose(1, 2).reshape(b, t, d)
-        return self.to_out(out)
+        out=self.to_out(out)
+        return self.layernorm(out)
       
       
 class Transformer(nn.Module):
